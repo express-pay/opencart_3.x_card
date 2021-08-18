@@ -11,7 +11,6 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['AccountNo'] = $this->session->data['order_id'];
 
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], 2);
 
         $amount = str_replace('.',',',$this->currency->format($order_info['total'], $this->session->data['currency'], '', false));
 
