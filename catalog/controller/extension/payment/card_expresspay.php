@@ -11,6 +11,7 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['AccountNo'] = $this->session->data['order_id'];
 
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
+        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], 1);
 
         $amount = str_replace('.',',',$this->currency->format($order_info['total'], $this->session->data['currency'], '', false));
 
@@ -27,19 +28,11 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         return true;
     }
 
-    //Test Link = http://opencart3:8080/index.php?route=extension/payment/card_expresspay/success&ExpressPayAccountNumber=21&ExpressPayInvoiceNo=347153&Signature=9047222EE0A0C53A8F3C8883885575FD1734AFF7
-
     public function success()
     {
 
         $this->load->model('extension/payment/card_expresspay');
 
-        /*if(!$this->model_extension_payment_card_expresspay->checkResponse($_REQUEST['Signature'], $_REQUEST, $this->config))
-        {
-            echo 'die';
-            die();
-        }
-        */
         $this->cart->clear();
 
         $this->load->language('extension/payment/card_expresspay');
@@ -78,9 +71,6 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['message_success'] = str_replace("##order_id##", $data['order_id'], $data['message_success']);
         $data['is_use_signature'] = ( $this->config->get('card_expresspay_sign_invoices') == 'on' ) ? true : false;
         $data['signature_success'] = $data['signature_cancel'] = "";
-
-        $this->load->model('checkout/order');
-        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], 1);
 
         $data['column_left'] = $this->load->controller('common/column_left');
         $data['column_right'] = $this->load->controller('common/column_right');
@@ -188,4 +178,17 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
 		header("HTTP/1.0 400 Bad Request");
 		echo 'FAILED | Incorrect digital signature';
 	}
+
+    function compute_signature($json, $secretWord)
+    {
+        $hash = NULL;
+
+        $secretWord = trim($secretWord);
+
+        if (empty($secretWord))
+            $hash = strtoupper(hash_hmac('sha1', $json, ""));
+        else
+            $hash = strtoupper(hash_hmac('sha1', $json, $secretWord));
+        return $hash;
+    }
 }
