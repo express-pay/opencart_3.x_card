@@ -1,7 +1,8 @@
 <?php
 class ControllerExtensionPaymentCardExpresspay extends Controller
 {
-    public function index() {
+    public function index()
+    {
 
         $this->load->model('extension/payment/card_expresspay');
 
@@ -13,12 +14,12 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
         $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], 1);
 
-        $amount = str_replace('.',',',$this->currency->format($order_info['total'], $this->session->data['currency'], '', false));
+        $amount = str_replace('.', ',', $this->currency->format($order_info['total'], $this->session->data['currency'], '', false));
 
         $data['Amount'] = $amount;
 
-        $data = $this->model_extension_payment_card_expresspay->setParams($data,$this->config);
-        $data['Info'] = str_replace('##order_id##', $this->session->data['order_id'] , $data['Info']);
+        $data = $this->model_extension_payment_card_expresspay->setParams($data, $this->config);
+        $data['Info'] = str_replace('##order_id##', $this->session->data['order_id'], $data['Info']);
 
         return $this->load->view('extension/payment/card_expresspay', $data);
     }
@@ -69,7 +70,7 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['message_success'] = nl2br($this->config->get('payment_card_expresspay_message_success'), true);
         $data['order_id'] = $this->session->data['order_id'];
         $data['message_success'] = str_replace("##order_id##", $data['order_id'], $data['message_success']);
-        $data['is_use_signature'] = ( $this->config->get('card_expresspay_sign_invoices') == 'on' ) ? true : false;
+        $data['is_use_signature'] = ($this->config->get('card_expresspay_sign_invoices') == 'on') ? true : false;
         $data['signature_success'] = $data['signature_cancel'] = "";
 
         $data['column_left'] = $this->load->controller('common/column_left');
@@ -128,59 +129,64 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
 
 
         $this->response->setOutput($this->load->view('extension/payment/card_expresspay_failure', $data));
-
     }
 
-    public function notify() {
-		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-			$secret_word = $this->config->get('payment_card_expresspay_secret_word_for_notification');
-			$is_use_signature = ( $this->config->get('payment_card_expresspay_is_use_signature_for_notification') == 'on' ) ? true : false;
-			$data = ( isset($this->request->post['Data']) ) ? htmlspecialchars_decode($this->request->post['Data']) : '';
-			$signature = ( isset($this->request->post['Signature']) ) ? $this->request->post['Signature'] : '';
-		    
-		    if($is_use_signature) {
-		    	if($signature == $this->compute_signature($data, $secret_word))
-			        $this->notify_success($data);
-			    else  
-			    	$this->notify_fail($data);
-		    } else 
-		    	$this->notify_success($data);
-		}
-	}
+    public function notify()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $secret_word = $this->config->get('payment_card_expresspay_secret_word_for_notification');
+            $is_use_signature = ($this->config->get('payment_card_expresspay_is_use_signature_for_notification') == 'on') ? true : false;
+            $data = (isset($this->request->post['Data'])) ? htmlspecialchars_decode($this->request->post['Data']) : '';
+            $signature = (isset($this->request->post['Signature'])) ? $this->request->post['Signature'] : '';
 
-	private function notify_success($dataJSON) {
-		try {
-        	$data = json_decode($dataJSON);
-    	} catch(Exception $e) {
-    		$this->notify_fail($dataJSON);
-    	}
+            if ($is_use_signature) {
+                if ($signature == $this->compute_signature($data, $secret_word))
+                    $this->notify_success($data);
+                else
+                    $this->notify_fail($data);
+            } else
+                $this->notify_success($data);
+        }
+    }
 
-        if(isset($data->CmdType)) {
-        	switch ($data->CmdType) {
-        		case '1':
-        			$this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_processed_status_id'));
-        			break;
-        		case '2':
-        			$this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_fail_status_id'));
-        			break;
+    private function notify_success($dataJSON)
+    {
+
+        $this->load->model('checkout/order');
+
+        try {
+            $data = json_decode($dataJSON);
+        } catch (Exception $e) {
+            $this->notify_fail($dataJSON);
+        }
+
+        if (isset($data->CmdType)) {
+            switch ($data->CmdType) {
+                case '1':
+                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_processed_status_id'));
+                    break;
+                case '2':
+                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_fail_status_id'));
+                    break;
                 case '3':
                     $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_processed_status_id'));
                     break;
-        		default:
-					$this->notify_fail($dataJSON);
-					die();
-        	}
+                default:
+                    $this->notify_fail($dataJSON);
+                    die();
+            }
 
-	    	header("HTTP/1.0 200 OK");
-	    	echo 'SUCCESS';
+            header("HTTP/1.0 200 OK");
+            echo 'SUCCESS';
         } else
-			$this->notify_fail($dataJSON);	
-	}
+            $this->notify_fail($dataJSON);
+    }
 
-	private function notify_fail($dataJSON) {
-		header("HTTP/1.0 400 Bad Request");
-		echo 'FAILED | Incorrect digital signature';
-	}
+    private function notify_fail($dataJSON)
+    {
+        header("HTTP/1.0 400 Bad Request");
+        echo 'FAILED | Incorrect digital signature';
+    }
 
     function compute_signature($json, $secretWord)
     {
