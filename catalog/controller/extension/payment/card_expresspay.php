@@ -163,6 +163,9 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         		case '2':
         			$this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_fail_status_id'));
         			break;
+                case '3':
+                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_processed_status_id'));
+                    break;
         		default:
 					$this->notify_fail($dataJSON);
 					die();
