@@ -12,11 +12,16 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['AccountNo'] = $this->session->data['order_id'];
 
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], 1);
 
-        $amount = str_replace('.', ',', $this->currency->format($order_info['total'], $this->session->data['currency'], '', false));
+        $amount = $this->currency->format($order_info['total'], $this->session->data['currency'], '', false);
 
-        $data['Amount'] = $amount;
+        if ($this->session->data['currency'] !== "BYN") {
+            $response = $this->getCurrencyRateFromNBRB($this->session->data['currency']);
+            $data['Amount'] = round($amount * $response->Cur_OfficialRate, 2);
+            $data['Amount'] = str_replace('.', ',', $data['Amount']);
+        } else {
+            $data['Amount'] = str_replace('.', ',', $amount);
+        }
 
         $data = $this->model_extension_payment_card_expresspay->setParams($data, $this->config);
         $data['Info'] = str_replace('##order_id##', $this->session->data['order_id'], $data['Info']);
@@ -39,7 +44,6 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $this->load->language('extension/payment/card_expresspay');
         $data['heading_title'] = $this->language->get('heading_title');
         $data['text_message'] = $this->language->get('text_message');
-        $this->document->setTitle($this->data['heading_title']);
 
         $data['breadcrumbs'] = array();
 
@@ -80,12 +84,18 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['footer'] = $this->load->controller('common/footer');
         $data['header'] = $this->load->controller('common/header');
 
+	$this->load->model('checkout/order');
+        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_card_expresspay_processed_status_id'));
+
         $this->response->setOutput($this->load->view('extension/payment/card_expresspay_successful', $data));
     }
+
 
     public function fail()
     {
         $this->load->language('extension/payment/card_expresspay');
+        $this->load->model('checkout/order');
+
         $data['heading_title'] = $this->language->get('heading_title_error');
         $data['text_message'] = $this->language->get('text_message_error');
         $this->document->setTitle($this->data['heading_title']);
@@ -127,6 +137,7 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         $data['footer'] = $this->load->controller('common/footer');
         $data['header'] = $this->load->controller('common/header');
 
+        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_card_expresspay_fail_status_id'));
 
         $this->response->setOutput($this->load->view('extension/payment/card_expresspay_failure', $data));
     }
@@ -163,13 +174,13 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
         if (isset($data->CmdType)) {
             switch ($data->CmdType) {
                 case '1':
-                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_processed_status_id'));
+                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_success_status_id'));
                     break;
                 case '2':
                     $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_fail_status_id'));
                     break;
                 case '3':
-                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_processed_status_id'));
+                    $this->model_checkout_order->addOrderHistory($data->AccountNo, $this->config->get('payment_card_expresspay_success_status_id'));
                     break;
                 default:
                     $this->notify_fail($dataJSON);
@@ -186,6 +197,11 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
     {
         header("HTTP/1.0 400 Bad Request");
         echo 'FAILED | Incorrect digital signature';
+    }
+
+    private function getCurrencyRateFromNBRB($currency)
+    {
+        return json_decode(file_get_contents("https://www.nbrb.by/api/exrates/rates/$currency?parammode=2"));
     }
 
     function compute_signature($json, $secretWord)
