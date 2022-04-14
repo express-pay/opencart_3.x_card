@@ -56,7 +56,10 @@ class ControllerExtensionPaymentCardExpresspay extends Controller{
 
 
         $this->load->model('checkout/order');
-        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get(self::PROCESSED_STATUS_ID_PARAM_NAME));
+        
+        if($this->model_checkout_order->getOrder($this->session->data['order_id'])['order_status_id'] != $this->config->get(self::SUCCESS_STATUS_ID_PARAM_NAME)){
+            $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get(self::PROCESSED_STATUS_ID_PARAM_NAME));
+        }
 
         $data = $this->setBreadcrumbs($data);
         $data = $this->setButtons($data);
