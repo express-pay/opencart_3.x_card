@@ -8,6 +8,7 @@
 
 class ControllerExtensionPaymentCardExpresspay extends Controller 
 {
+  const VERSION_EXTENSION                         = '1.0.1';
   const NAME_PAYMENT_METHOD                       = 'payment_card_expresspay_name_payment_method';
   const TOKEN_PARAM_NAME                          = 'payment_card_expresspay_token';
   const SERVICE_ID_PARAM_NAME                     = 'payment_card_expresspay_service_id';
@@ -66,8 +67,8 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
     $data = $this->model_extension_payment_card_expresspay->setParametersFromConfig($this->config, $this->request->post, $data);
 
     $data['order_statuses'] = $this->model_localisation_order_status->getOrderStatuses();
-
     $data['user_token'] = $this->session->data['user_token'];
+    $data['version_extension'] = self::VERSION_EXTENSION;
 
     $data = $this->setBreadcrumbs($data);
     $data = $this->setButtons($data);
