@@ -78,7 +78,7 @@ class ControllerExtensionPaymentCardExpresspay extends Controller
   }
 
   private function validate() {
-    if (!$this->user->hasPermission('modify', 'extension/payment/erip_expresspay')) {
+    if (!$this->user->hasPermission('modify', 'extension/payment/card_expresspay')) {
       $this->error['warning'] = $this->language->get('errorPermission');
     }
 
