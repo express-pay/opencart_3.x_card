@@ -49,6 +49,9 @@ class ModelExtensionPaymentCardExpresspay extends Model {
     {
         self::$model = new CardExpressPayModel($config);
         $orderId = $this->session->data['order_id'];
+
+        $this->load->model('checkout/order');
+
         $order_info = $this->model_checkout_order->getOrder($orderId);
         $amount = str_replace('.', ',', $this->currency->format($order_info['total'], $this->session->data['currency'], '', false));
         if ($this->session->data['currency'] !== "BYN") {
